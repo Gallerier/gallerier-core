@@ -34,6 +34,7 @@ contract GallerierERC721 is ERC721, IGallerierERC721, IERC1155Receiver {
         gallerierWrapper = _gallerierWrapper;
     }
 
+    // TODO: config support type
     function supportsInterface(bytes4 interfaceId)
         public
         view
