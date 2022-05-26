@@ -1,43 +1,56 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "./GallerierERC721.sol";
-import "./interfaces/IGallerierWrapper.sol";
-import "./interfaces/IGallerierERC721.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
+import { GallerierERC721 } from "./GallerierERC721.sol";
+import { TokenIdOnToken, IGallerierERC721 } from "./interfaces/IGallerierERC721.sol";
 
 import "hardhat/console.sol";
 
-contract GallerierWrapper is IGallerierWrapper {
-    address public immutable admin;
+contract GallerierWrapper is Ownable {
+    address public gallerierCover;
     uint256 public length;
-    mapping(uint256 => address) galleriers;
-    address public immutable gallerierCover;
+
+    address[] public galleriers;
+
+    event Wrap(uint256 id, TokenIdOnToken cover, TokenIdOnToken[] workpieces);
+    event Unwrap(uint256 id);
+
     // TODO: whitelist cover
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Ownable: caller is not the admin");
-        _;
+    constructor(address _gallerierCover) {
+        gallerierCover = _gallerierCover;
     }
 
-    constructor(address _gallerierCover) {
-        admin = msg.sender;
+    function setCover(address _gallerierCover) external onlyOwner {
         gallerierCover = _gallerierCover;
+    }
+
+    function galleryLength() external view returns (uint) {
+        return galleriers.length;
+    }
+
+    function withdraw() external onlyOwner {
+        uint balance = address(this).balance;
+        payable(msg.sender).transfer(balance);
     }
 
     function wrap(
         TokenIdOnToken memory _cover,
-        TokenIdOnToken[] memory _workpices
+        TokenIdOnToken[] memory _workpieces
     ) public returns(address gallerierERC721) {
+
+        require(gallerierCover == _cover.token, "Invalid cover");
+
         GallerierERC721 gallerier = new GallerierERC721(
             address(this),
             msg.sender
         );
-        galleriers[length] = address(gallerier);
-        length += 1;
+        galleriers.push(address(gallerier));
 
-        require(gallerierCover == _cover.token, "Not Gallerier's Cover");
         IERC1155(_cover.token).safeTransferFrom(
             msg.sender,
             address(gallerier),
@@ -46,20 +59,23 @@ contract GallerierWrapper is IGallerierWrapper {
             ""
         );
 
-        for (uint256 i = 0; i < _workpices.length; i++) {
-            TokenIdOnToken memory workpice = _workpices[i];
-            IERC721(workpice.token).transferFrom(
+        for (uint256 i = 0; i < _workpieces.length; i++) {
+            TokenIdOnToken memory workpiece = _workpieces[i];
+            IERC721(workpiece.token).transferFrom(
                 msg.sender,
                 address(gallerier),
-                workpice.tokenId
+                workpiece.tokenId
             );
         }
 
-        gallerier.gallerierMaking(_cover, _workpices);
+        gallerier.gallerierMaking(_cover, _workpieces);
         gallerierERC721 = address(gallerier);
+
+        emit Wrap(galleriers.length - 1, _cover, _workpieces);
     }
 
     function unwrap(uint256 id) public {
         IGallerierERC721(galleriers[id]).burn();
+        emit Unwrap(id);
     }
 }

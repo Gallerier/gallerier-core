@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:fork": "hardhat test --network hardhat",
+    "deploy:testnet": "hardhat run --network rinkeby scripts/deploy.ts",
+    "typechain": "hardhat typechain"
   },
   "keywords": [],
   "author": "",

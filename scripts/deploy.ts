@@ -14,12 +14,27 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
+
+  // Deploy cover token
+  const GallerierERC1155 = await ethers.getContractFactory("GallerierERC1155");
+  const cover = await GallerierERC1155.deploy();
+
+  await cover.deployed();
+
+  console.log("GallerierCover deployed to:", cover.address);
+
+  const _name = "common";
+  const _limit = 100;
+  const _price = ethers.utils.parseEther("0.02");
+  await cover.addCoverCollection(_name, _limit, _price)
+
+  // Deploy wrapper
   const GallerierWrapper = await ethers.getContractFactory("GallerierWrapper");
-  const gallerierWrapper = await GallerierWrapper.deploy();
+  const wrapper = await GallerierWrapper.deploy(cover.address);
 
-  await gallerierWrapper.deployed();
+  await wrapper.deployed();
 
-  console.log("GallerierWrapper deployed to:", gallerierWrapper.address);
+  console.log("GallerierWrapper deployed to:", wrapper.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
